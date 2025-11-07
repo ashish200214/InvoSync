@@ -1,4 +1,5 @@
 package com.asent.invoSync.entity;
+
 import jakarta.persistence.*;
 import lombok.*;
 
@@ -9,8 +10,9 @@ import lombok.*;
 public class Item {
     @Id @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    private Integer quantity;
+
     private String particular;
+    private Integer quantity;
     private Double price;
     private Double total;
 

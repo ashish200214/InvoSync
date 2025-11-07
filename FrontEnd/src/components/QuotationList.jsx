@@ -1,111 +1,87 @@
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import "./QuotationList.css";
+import { useNavigate } from "react-router-dom";
 
-const QuotationList = () => {
-  const [quotations, setQuotations] = useState([]);
+export default function QuotationList(){
+  const [rows, setRows] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
-  const [sendingId, setSendingId] = useState(null);
+  const nav = useNavigate();
 
-  useEffect(() => {
-    const fetchQuotations = async () => {
-      try {
-        const response = await axios.get("http://localhost:9090/api/quotations/");
-        setQuotations(response.data);
-      } catch (err) {
-        console.error(err);
-        setError("Failed to fetch quotations.");
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchQuotations();
-  }, []);
+  useEffect(()=>{
+    fetch();
+  },[]);
 
-  const handleConfirmOrder = async (id) => {
-    try {
-      await axios.get(`http://localhost:9090/confirmQuotation/${id}`);
-      setQuotations((prev) =>
-        prev.map((q) => (q.id === id ? { ...q, status: "Confirmed" } : q))
-      );
-    } catch (err) {
+  const fetch = async ()=>{
+    try{
+      const res = await axios.get("http://localhost:9090/api/quotations/");
+      setRows(res.data || []);
+    }catch(err){
       console.error(err);
-      alert("Failed to confirm order.");
+      alert("Failed to load quotations");
+    }finally{
+      setLoading(false);
     }
   };
 
-  const handleSendQuotation = (id) => {
-    setSendingId(id);
-    window.open(`/api/quotations/${id}/send`, "_blank");
-    setTimeout(() => setSendingId(null), 1000);
+  const handleConfirm = async (id) => {
+    try{
+      // call backend confirm (should create bill and return bill id)
+      const res = await axios.post(`http://localhost:9090/confirmQuotation/${id}`);
+      const billId = res.data;
+      if(billId) nav(`/bills/${billId}`);
+      else {
+        // fallback to /bills
+        nav("/bills");
+      }
+    }catch(e){
+      console.error(e);
+      alert("Failed to confirm order");
+    }
   };
 
-  if (loading) return <p style={{ textAlign: "center" }}>Loading...</p>;
-  if (error) return <p style={{ textAlign: "center", color: "red" }}>{error}</p>;
+  const openSend = (id) => {
+    nav(`/quotations/${id}/send`);
+  };
 
   return (
-    <div className="quotation-list-container">
-      <h2 style={{ textAlign: "center", marginBottom: "20px" }}>All Quotations</h2>
+    <div>
+      <div style={{display:"flex", justifyContent:"space-between", marginBottom:12}}>
+        <h2>All Quotations</h2>
+        <div>
+          <button className="btn btn-primary" onClick={()=>nav("/quotations/new")}>+ New</button>
+        </div>
+      </div>
 
-      {quotations.length === 0 ? (
-        <p style={{ textAlign: "center" }}>No quotations available.</p>
-      ) : (
-        <table className="quotation-table">
-          <thead>
-            <tr>
-              <th>ID</th>
-              <th>Customer Name</th>
-              <th>WhatsApp No</th>
-              <th>Email</th>
-              <th>Requirement</th>
-              <th>Status</th>
-              <th>Action</th>
-            </tr>
-          </thead>
-
-          <tbody>
-            {quotations.map((q) => (
-              <tr key={q.id}>
-                <td>{q.id}</td>
-
-                {/* ✅ FIXED — Read directly from root level */}
-                <td>{q.name || "N/A"}</td>
-                <td>{q.whatsAppNo || "N/A"}</td>
-                <td>{q.email || "N/A"}</td>
-
-                <td>{q.initialRequirement || "N/A"}</td>
-                <td>{q.status || "Pending"}</td>
-
-                <td>
-                  {q.status === "Confirmed" ? (
-                    <button className="order-confirmed" disabled>
-                      Order Confirmed
-                    </button>
-                  ) : (
-                    <button
-                      className="confirm-order"
-                      onClick={() => handleConfirmOrder(q.id)}
-                    >
-                      Confirm Order
-                    </button>
-                  )}
-
-                  <button
-                    className="send-quotation"
-                    onClick={() => handleSendQuotation(q.id)}
-                    disabled={sendingId === q.id}
-                  >
-                    {sendingId === q.id ? "Opening..." : "Send Quotation"}
-                  </button>
-                </td>
+      <div className="card">
+        {loading ? <div className="center">Loading...</div> :
+          rows.length === 0 ? <div className="center small">No quotations</div> :
+          <table className="table">
+            <thead>
+              <tr>
+                <th>ID</th><th>Customer</th><th>WhatsApp</th><th>Email</th><th>Requirement</th><th>Status</th><th>Action</th>
               </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+            </thead>
+            <tbody>
+              {rows.map(q => (
+                <tr key={q.id}>
+                  <td>{q.id}</td>
+                  <td>{q.customer?.name || q.name || "N/A"}</td>
+                  <td>{q.customer?.whatsAppNo || q.whatsAppNo || "N/A"}</td>
+                  <td>{q.customer?.email || q.email || "N/A"}</td>
+                  <td>{q.initialRequirement || "N/A"}</td>
+                  <td>{q.status || "Pending"}</td>
+                  <td>
+                    <div className="actions-row">
+                      <button className="btn btn-ghost" onClick={()=>openSend(q.id)}>Send</button>
+                      <button className="btn btn-primary" onClick={()=>handleConfirm(q.id)}>Confirm</button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        }
+      </div>
     </div>
   );
-};
-
-export default QuotationList;
+}

@@ -95,3 +95,16 @@
     font-size: 0.8em;
   }
 }
+.nav-btn {
+  background: #0066cc;
+  color: white;
+  padding: 8px 14px;
+  margin-right: 10px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+}
+
+.nav-btn:hover {
+  background: #004d99;
+}

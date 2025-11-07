@@ -1,89 +1,62 @@
 import React, { useState } from "react";
 import axios from "axios";
-import "./QuotationForm.css";
+import { useNavigate } from "react-router-dom";
 
-const QuotationForm = () => {
-  const [quotation, setQuotation] = useState({
-    name: "",
-    email: "",
-    whatsAppNo: "",
-    initialRequirement: "",
-  });
+export default function QuotationForm(){
+  const [form, setForm] = useState({ name:"", email:"", whatsAppNo:"", initialRequirement:"" });
+  const [msg, setMsg] = useState("");
+  const nav = useNavigate();
 
-  const [message, setMessage] = useState("");
+  const change = (e) => setForm({...form, [e.target.name]: e.target.value });
 
-  const handleChange = (e) => {
-    setQuotation({
-      ...quotation,
-      [e.target.name]: e.target.value,
-    });
-  };
-
-  const handleSubmit = async (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-
-    try {
-      const response = await axios.post(
-        "http://localhost:9090/api/quotations/saveQuotation",
-        quotation
-      );
-      setMessage(response.data);
-      setQuotation({ name: "", email: "", whatsAppNo: "", initialRequirement: "" });
-    } catch (error) {
-      console.error("Error submitting quotation:", error);
-      setMessage(error.response?.data || "Failed to submit quotation. Try again.");
+    try{
+      // Backend expects QuotationDTO flattened shape
+      await axios.post("http://localhost:9090/api/quotations/saveQuotation", form);
+      setMsg("Saved");
+      setTimeout(()=> nav("/quotations"), 800);
+    }catch(err){
+      console.error(err);
+      setMsg("Failed to save");
     }
   };
 
   return (
-    <div className="quotation-container">
-      <h2 className="title">Add Quotation</h2>
-      <form onSubmit={handleSubmit} className="quotation-form">
-        <label>Customer Name</label>
-        <input
-          type="text"
-          name="name"
-          value={quotation.name}
-          onChange={handleChange}
-          placeholder="Enter customer name"
-          required
-        />
+    <div>
+      <h2>Create Quotation</h2>
+      <div className="card" style={{maxWidth:720}}>
+        <form onSubmit={submit}>
+          <div className="form-row">
+            <div className="field">
+              <label>Customer name</label>
+              <input name="name" value={form.name} onChange={change} required />
+            </div>
+            <div className="field">
+              <label>WhatsApp No</label>
+              <input name="whatsAppNo" value={form.whatsAppNo} onChange={change} required />
+            </div>
+          </div>
 
-        <label>Email Address</label>
-        <input
-          type="email"
-          name="email"
-          value={quotation.email}
-          onChange={handleChange}
-          placeholder="Enter customer email"
-          required
-        />
+          <div className="form-row">
+            <div className="field">
+              <label>Email</label>
+              <input name="email" value={form.email} onChange={change} type="email" />
+            </div>
+            <div className="field">
+              <label>Requirement</label>
+              <input name="initialRequirement" value={form.initialRequirement} onChange={change} />
+            </div>
+          </div>
 
-        <label>WhatsApp No</label>
-        <input
-          type="text"
-          name="whatsAppNo"
-          value={quotation.whatsAppNo}
-          onChange={handleChange}
-          placeholder="Enter WhatsApp number"
-          required
-        />
+          <div style={{display:"flex", gap:8}}>
+            <button className="btn btn-primary" type="submit">Save</button>
+            <button className="btn btn-ghost" type="button" onClick={()=>nav("/quotations")}>Cancel</button>
+          </div>
+        </form>
 
-        <label>Requirement</label>
-        <textarea
-          name="initialRequirement"
-          value={quotation.initialRequirement}
-          onChange={handleChange}
-          placeholder="Enter customer requirement"
-          required
-        />
-
-        <button type="submit">Submit Quotation</button>
-      </form>
-
-      {message && <p className="message">{message}</p>}
+        {msg && <div style={{marginTop:12}} className="small">{msg}</div>}
+      </div>
     </div>
   );
-};
-
-export default QuotationForm;
+}

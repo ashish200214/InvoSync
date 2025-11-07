@@ -1,16 +1,20 @@
-import { useState } from 'react'
-import reactLogo from './assets/react.svg'
-import viteLogo from '/vite.svg'
-import './App.css'
-import QuotationForm from './components/QuotationForm'
+import React from "react";
+import { Outlet } from "react-router-dom";
+import TopNav from "./components/TopNav";
+import Sidebar from "./components/Sidebar";
+import Footer from "./components/Footer";
 
-function App() {
-
+export default function App() {
   return (
-  <>
-  <QuotationForm></QuotationForm>
-  </>
-  )
+    <div className="app-root">
+      <Sidebar />
+      <div className="main-area">
+        <TopNav />
+        <div className="content-area">
+          <Outlet />
+        </div>
+        <Footer />
+      </div>
+    </div>
+  );
 }
-
-export default App

@@ -1,4 +1,5 @@
 package com.asent.invoSync.entity;
+
 import jakarta.persistence.*;
 import lombok.*;
 import java.util.*;
@@ -12,7 +13,7 @@ public class Bill {
     private Long id;
 
     @OneToOne
-    @JoinColumn(name = "drawing_id")
+    @JoinColumn(name="drawing_id")
     private Drawing drawing;
 
     private Double total;
