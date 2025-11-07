@@ -1,0 +1,71 @@
+.billing-container {
+  max-width: 1000px;
+  margin: 30px auto;
+  padding: 20px;
+  border-radius: 10px;
+  background-color: #f9f9f9;
+  box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+}
+
+.billing-title {
+  text-align: center;
+  margin-bottom: 20px;
+  color: #222;
+}
+
+.billing-table {
+  width: 100%;
+  border-collapse: collapse;
+  background-color: white;
+}
+
+.billing-table th,
+.billing-table td {
+  border: 1px solid #ccc;
+  padding: 10px;
+  text-align: left;
+  color: #222;
+  font-size: 0.95em;
+}
+
+.billing-table th {
+  background-color: #007bff;
+  color: #fff;
+  text-transform: uppercase;
+}
+
+.billing-table tr:nth-child(even) {
+  background-color: #f2f2f2;
+}
+
+.billing-table tr:hover {
+  background-color: #eaf3ff;
+  transition: 0.2s ease-in;
+}
+
+.pay-button {
+  background-color: #28a745;
+  color: white;
+  border: none;
+  padding: 4px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.9em;
+}
+
+.pay-button:hover {
+  background-color: #218838;
+}
+
+.pay-button:disabled {
+  background-color: #6c757d;
+  cursor: not-allowed;
+}
+
+.no-data,
+.loading,
+.error {
+  text-align: center;
+  margin-top: 20px;
+  color: #222;
+}
