@@ -295,12 +295,3 @@ This project is licensed under **MIT License**.
 
 ---
 
-# ✅ Need Help?
-
-You can ask me anytime for:
-
-✅ Architecture diagram
-✅ Swagger documentation
-✅ GitHub Actions CI/CD
-✅ Dockerfile
-✅ Hosting guide
