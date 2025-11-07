@@ -41,15 +41,7 @@ This system provides:
 
 # 📸 Screenshots (Add your images later)
 
-> Replace the placeholders below with actual images
 
-```
-![Add Quotation Page](./screenshots/add-quotation.png)
-![Quotation List](./screenshots/quotation-list.png)
-![Send Quotation](./screenshots/send-quotation.png)
-```
-
----
 
 # 📦 Features
 
