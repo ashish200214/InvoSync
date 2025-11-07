@@ -1,9 +1,4 @@
-Great ✅
-Below is a **clean, professional, GitHub-ready README.md** — formatted exactly how GitHub prefers, with badges, sections, screenshots placeholders, installation steps, project structure, API docs, and contribution guide.
 
-You can **copy–paste this directly into your GitHub repository** as `README.md`.
-
----
 
 # 📄 InfoSync Quotation Management System
 
