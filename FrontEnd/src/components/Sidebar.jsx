@@ -13,9 +13,22 @@ export default function Sidebar(){
       </div>
 
       <nav>
-        <NavLink to="/quotations" className={({isActive})=> "nav-link "+(isActive?"active":"")}>📄 Quotations</NavLink>
-        <NavLink to="/quotations/new" className={({isActive})=> "nav-link "+(isActive?"active":"")}>➕ New Quotation</NavLink>
-        <NavLink to="/bills" className={({isActive})=> "nav-link "+(isActive?"active":"")}>💳 Bills</NavLink>
+        <NavLink to="/quotations" className={({isActive})=> "nav-link "+(isActive?"active":"")}>
+          📄 Quotations
+        </NavLink>
+
+        <NavLink to="/quotations/new" className={({isActive})=> "nav-link "+(isActive?"active":"")}>
+          ➕ New Quotation
+        </NavLink>
+
+        <NavLink to="/bills" className={({isActive})=> "nav-link "+(isActive?"active":"")}>
+          💳 Bills
+        </NavLink>
+
+        {/* ⭐ NEW NAVLINK — Customer Files */}
+        <NavLink to="/customer-files" className={({isActive})=> "nav-link "+(isActive?"active":"")}>
+          📁 Customer Files
+        </NavLink>
       </nav>
 
       <div style={{marginTop:20, color:"#cfe8ff", fontSize:13}}>

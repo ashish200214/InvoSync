@@ -9,6 +9,7 @@ import QuotationForm from "./components/QuotationForm";
 import SendQuotation from "./components/SendQuotation";
 import BillingList from "./components/BillingList";
 import BillingPage from "./components/BillingPage";
+import CustomerFiles from "./components/CustomerFiles";   // ⭐ IMPORT THIS
 
 createRoot(document.getElementById("root")).render(
   <StrictMode>
@@ -21,6 +22,9 @@ createRoot(document.getElementById("root")).render(
           <Route path="quotations/:id/send" element={<SendQuotation />} />
           <Route path="bills" element={<BillingList />} />
           <Route path="bills/:id" element={<BillingPage />} />
+
+          {/* ⭐ New Route */}
+          <Route path="customer-files" element={<CustomerFiles />} />
         </Route>
       </Routes>
     </BrowserRouter>
