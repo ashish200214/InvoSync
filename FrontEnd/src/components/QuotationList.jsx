@@ -23,21 +23,17 @@ export default function QuotationList(){
     }
   };
 
-  const handleConfirm = async (id) => {
-    try{
-      // call backend confirm (should create bill and return bill id)
-      const res = await axios.post(`http://localhost:9090/confirmQuotation/${id}`);
-      const billId = res.data;
-      if(billId) nav(`/bills/${billId}`);
-      else {
-        // fallback to /bills
-        nav("/bills");
-      }
-    }catch(e){
-      console.error(e);
-      alert("Failed to confirm order");
-    }
-  };
+ const handleConfirm = async (id) => {
+  try{
+    const res = await axios.post(`http://localhost:9090/api/billing/confirmFromQuotation/${id}`);
+    const billId = res.data;
+    nav(`/bills/${billId}`); // <-- use returned bill id
+  } catch(e){
+    console.error(e);
+    alert("Failed to confirm order");
+  }
+};
+
 
   const openSend = (id) => {
     nav(`/quotations/${id}/send`);
