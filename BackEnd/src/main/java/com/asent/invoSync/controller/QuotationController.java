@@ -14,53 +14,33 @@ import java.util.List;
 @RequestMapping("/api/quotations")
 @CrossOrigin(origins = "http://localhost:5173")
 public class QuotationController {
-
-    @Autowired
-    private QuotationService quotationService;
+    @Autowired private QuotationService service;
 
     @GetMapping("/")
-    public List<QuotationDTO> getAll() {
-        return quotationService.getAll();
-    }
+    public List<com.asent.invoSync.dto.QuotationDTO> getAll() { return service.getAll(); }
 
     @GetMapping("/{id}")
-    public QuotationDTO getById(@PathVariable Long id) {
-        return quotationService.getById(id);
-    }
+    public com.asent.invoSync.dto.QuotationDTO getById(@PathVariable Long id) { return service.getById(id); }
 
-    /**
-     * Endpoint to receive generated PDF + drawing + images.
-     * Frontend sends:
-     *  - quotationPdf (multipart file) OR "quotationPdf" could be named according to frontend
-     *  - drawingFile (optional)
-     *  - images (optional list)
-     *
-     * NOTE: adapt request part names to match your frontend formData keys.
-     */
-    @PostMapping("/{quotationId}/send")
+    // send endpoint - expects request parts
+    @PostMapping("/{id}/send")
     public ResponseEntity<String> sendQuotation(
-            @PathVariable Long quotationId,
-            @RequestPart(value = "quotationPdf", required = false) MultipartFile quotationPdf,
-            @RequestPart(value = "drawingFile", required = false) MultipartFile drawingFile,
-            @RequestPart(value = "images", required = false) List<MultipartFile> images) {
-
+            @PathVariable Long id,
+            @RequestPart(value="quotationPdf", required=false) MultipartFile quotationPdf,
+            @RequestPart(value="drawing", required=false) MultipartFile drawing,
+            @RequestPart(value="images", required=false) List<MultipartFile> images
+    ) {
         try {
-            String res = quotationService.sendQuotation(quotationId, quotationPdf, drawingFile, images);
-            return ResponseEntity.ok(res);
-        } catch (Exception e) {
+            service.sendQuotation(id, quotationPdf, drawing, images);
+            return ResponseEntity.ok("Sent");
+        } catch(Exception e){
             e.printStackTrace();
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(e.getMessage());
         }
     }
 
     @PostMapping("/saveQuotation")
-    public ResponseEntity<String> saveQuotation(@RequestBody QuotationDTO dto) {
-        try {
-            String res = quotationService.createQuotationAndCustomer(dto);
-            return ResponseEntity.ok(res);
-        } catch (Exception e) {
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(e.getMessage());
-        }
+    public String saveQuotation(@RequestBody QuotationDTO dto){
+        return service.createQuotationAndCustomer(dto);
     }
 }

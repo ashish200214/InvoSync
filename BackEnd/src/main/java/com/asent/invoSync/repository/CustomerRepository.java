@@ -5,5 +5,4 @@ import com.asent.invoSync.entity.Customer;
 
 public interface CustomerRepository extends JpaRepository<Customer, Long> {
     Customer findByWhatsAppNo(String whatsAppNo);
-    
 }

@@ -6,155 +6,87 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.asent.invoSync.entity.*;
 import com.asent.invoSync.repository.*;
+import com.asent.invoSync.mapper.QuotationMapper;
 import com.asent.invoSync.dto.QuotationDTO;
+import com.asent.invoSync.dto.CustomerDTO;
+import com.asent.invoSync.dto.ItemDTO;
+import com.asent.invoSync.mapper.ItemMapper;
+
 import java.io.IOException;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
 import java.util.stream.Collectors;
 
-/**
- * QuotationService - provides methods for listing, fetching,
- * creating and sending quotations.
- *
- * This version expects QuotationDTO in the flattened shape:
- *  { name, email, whatsAppNo, initialRequirement, ... }
- */
 @Service
 public class QuotationService {
 
     @Autowired private QuotationRepository quotationRepository;
     @Autowired private CustomerRepository customerRepository;
     @Autowired private BillingRepository billRepository;
+    @Autowired private ItemRepository itemRepository;
     @Autowired private S3Service s3Service;
     @Autowired private EmailService emailService;
 
-    // Get all quotations (return flattened DTO list)
     public List<QuotationDTO> getAll() {
-        List<Quotation> quotations = quotationRepository.findAll();
-        return quotations.stream().map(q -> {
-            QuotationDTO dto = new QuotationDTO();
-            dto.setId(q.getId());
-            dto.setInitialRequirement(q.getInitialRequirement());
-            dto.setStatus(q.getStatus());
-            dto.setDate(q.getDate());
-            dto.setTotal(q.getTotal());
-            if (q.getCustomer() != null) {
-                dto.setName(q.getCustomer().getName());
-                dto.setEmail(q.getCustomer().getEmail());
-                dto.setWhatsAppNo(q.getCustomer().getWhatsAppNo());
-            }
-            // Optionally map items to DTOs if needed (keeping as-is)
-            return dto;
-        }).collect(Collectors.toList());
+        return quotationRepository.findAll().stream().map(QuotationMapper::toDTO).collect(Collectors.toList());
     }
 
-    // Get single quotation by id (flattened DTO)
     public QuotationDTO getById(Long id) {
-        Quotation q = quotationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Quotation not found for id: " + id));
-        QuotationDTO dto = new QuotationDTO();
-        dto.setId(q.getId());
-        dto.setInitialRequirement(q.getInitialRequirement());
-        dto.setStatus(q.getStatus());
-        dto.setDate(q.getDate());
-        dto.setTotal(q.getTotal());
-        if (q.getCustomer() != null) {
-            dto.setName(q.getCustomer().getName());
-            dto.setEmail(q.getCustomer().getEmail());
-            dto.setWhatsAppNo(q.getCustomer().getWhatsAppNo());
-        }
-        // If you want to include items you can map them here
-        return dto;
+        Quotation q = quotationRepository.findByIdWithItems(id).orElseThrow(() -> new RuntimeException("Not found"));
+        return QuotationMapper.toDTO(q);
     }
 
-    /**
-     * Send quotation - uploads files and sends email (PDF + images).
-     * Parameters: pdfFile (optional), drawingFile (optional), images (optional).
-     *
-     * NOTE: this method signature matches the controller usage in your project.
-     */
-    public String sendQuotation(Long id, MultipartFile pdfFile, MultipartFile drawingFile, List<MultipartFile> images)
-            throws IOException {
-
-        Quotation q = quotationRepository.findById(id)
-                .orElseThrow(() -> new RuntimeException("Quotation not found for id: " + id));
-
-        Customer customer = q.getCustomer();
-        if (customer == null) throw new RuntimeException("Customer not found for quotation id: " + id);
-
-        String whatsAppNo = customer.getWhatsAppNo() != null ? customer.getWhatsAppNo() : "unknown";
+    // pdfFile = generated pdf (frontend), drawingFile uploaded, images uploaded
+    public String sendQuotation(Long id, MultipartFile pdfFile, MultipartFile drawingFile, List<MultipartFile> images) throws IOException {
+        Quotation q = quotationRepository.findByIdWithItems(id).orElseThrow(() -> new RuntimeException("No quotation"));
+        Customer c = q.getCustomer();
+        String whats = c!=null?c.getWhatsAppNo():"unknown";
         DateTimeFormatter fmt = DateTimeFormatter.ofPattern("yyyyMMdd_HHmmss");
         String ts = LocalDateTime.now().format(fmt);
 
-        // Upload PDF (if present)
         String pdfUrl = null;
-        if (pdfFile != null && !pdfFile.isEmpty()) {
-            String pdfBase = "quotation_" + id + "_" + ts;
-            pdfUrl = s3Service.uploadFileWithCustomerFolder(pdfFile, whatsAppNo, "pdf", pdfBase);
+        if(pdfFile!=null && !pdfFile.isEmpty()){
+            pdfUrl = s3Service.uploadFileWithCustomerFolder(pdfFile, whats, "pdf", "quotation_"+id+"_"+ts);
         }
 
-        // Upload drawing (store but do not include in email)
-        if (drawingFile != null && !drawingFile.isEmpty()) {
-            String drawingBase = "quotation_" + id + "_drawing_" + ts;
-            s3Service.uploadFileWithCustomerFolder(drawingFile, whatsAppNo, "drawings", drawingBase);
+        if(drawingFile!=null && !drawingFile.isEmpty()){
+            s3Service.uploadFileWithCustomerFolder(drawingFile, whats, "drawings", "quotation_"+id+"_drawing_"+ts);
         }
 
-        // Upload images
         List<String> imageUrls = new ArrayList<>();
-        if (images != null && !images.isEmpty()) {
-            for (int i = 0; i < images.size(); i++) {
-                String imgBase = "quotation_" + id + "_img" + (i + 1) + "_" + ts;
-                imageUrls.add(s3Service.uploadFileWithCustomerFolder(images.get(i), whatsAppNo, "images", imgBase));
+        if(images!=null){
+            for(int i=0;i<images.size();i++){
+                imageUrls.add(s3Service.uploadFileWithCustomerFolder(images.get(i), whats, "images", "quotation_"+id+"_img"+(i+1)+"_"+ts));
             }
         }
 
-        // Create bill if needed
+        // Create bill entry
         Bill bill = new Bill();
         bill.setDrawing(q.getDrawing());
-        double sum = q.getItems() != null
-                ? q.getItems().stream().mapToDouble(it -> it.getTotal() != null ? it.getTotal() : 0).sum()
-                : 0;
+        double sum = q.getItems()!=null? q.getItems().stream().mapToDouble(it->it.getTotal()!=null?it.getTotal():0).sum() : 0;
         bill.setTotal(sum);
         bill.setRemainingAmount(sum);
         billRepository.save(bill);
 
-        // Send email with PDF and images only
-        String email = customer.getEmail();
-        if (email != null && !email.isEmpty()) {
+        // send email with pdf and images (but not drawing)
+        String email = c!=null?c.getEmail():null;
+        if(email!=null && !email.isBlank()){
             List<String> links = new ArrayList<>();
-            if (pdfUrl != null) links.add("Quotation PDF: " + pdfUrl);
+            if(pdfUrl!=null) links.add(pdfUrl);
             links.addAll(imageUrls);
-
-            emailService.sendQuotationLinks(
-                    email,
-                    "Your Quotation",
-                    "Please find your quotation and product images below:",
-                    links
-            );
-        } else {
-            // If no email present, still return success text but inform user
-            return "Quotation processed but customer has no email registered.";
+            emailService.sendQuotationLinks(email, "Your Quotation", "Please find your quotation below:", links);
         }
 
-        return "Quotation sent successfully to " + email;
+        return "Sent";
     }
 
-    // Create Quotation + Customer using flattened DTO
     public String createQuotationAndCustomer(QuotationDTO dto) {
-
-        if (dto == null) {
-            throw new RuntimeException("Request body is empty.");
-        }
-
-        // If frontend sent flat shape, use whatsAppNo from dto
-        if (dto.getWhatsAppNo() == null || dto.getWhatsAppNo().isBlank()) {
-            throw new RuntimeException("WhatsApp number is required.");
-        }
-
-        // Find existing customer by WhatsApp
-        Customer customer = customerRepository.findByWhatsAppNo(dto.getWhatsAppNo());
-        if (customer == null) {
+        if(dto==null) throw new RuntimeException("Empty dto");
+        // use flat fields if supplied
+        String whats = dto.getWhatsAppNo() != null ? dto.getWhatsAppNo() : "";
+        Customer customer = customerRepository.findByWhatsAppNo(whats);
+        if(customer==null){
             customer = new Customer();
             customer.setName(dto.getName());
             customer.setEmail(dto.getEmail());
@@ -162,14 +94,12 @@ public class QuotationService {
             customer.setDate(LocalDateTime.now());
             customerRepository.save(customer);
         }
-
-        Quotation quotation = new Quotation();
-        quotation.setCustomer(customer);
-        quotation.setInitialRequirement(dto.getInitialRequirement());
-        quotation.setStatus("Pending");
-        quotation.setDate(LocalDateTime.now());
-        quotationRepository.save(quotation);
-
-        return "Customer and quotation created successfully";
+        Quotation q = new Quotation();
+        q.setCustomer(customer);
+        q.setInitialRequirement(dto.getInitialRequirement());
+        q.setStatus("Pending");
+        q.setDate(LocalDateTime.now());
+        quotationRepository.save(q);
+        return "OK";
     }
 }

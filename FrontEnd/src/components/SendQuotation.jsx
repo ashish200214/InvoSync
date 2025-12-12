@@ -1,238 +1,177 @@
-// ✅ SendQuotation.jsx (FULL & FIXED)
-
 import React, { useEffect, useState } from "react";
 import axios from "axios";
-import { useParams } from "react-router-dom";
-import jsPDF from "jspdf";
-import "./SendQuotation.css";
+import { useParams, useNavigate } from "react-router-dom";
+import { jsPDF } from "jspdf";
 
-export default function SendQuotation() {
+export default function SendQuotation(){
   const { id } = useParams();
+  const nav = useNavigate();
+
   const [quotation, setQuotation] = useState(null);
-  const [items, setItems] = useState([{ name: "", qty: 1, price: 0 }]);
+  const [items, setItems] = useState([{ name:"", qty:1, price:0 }]);
   const [drawing, setDrawing] = useState(null);
   const [images, setImages] = useState([]);
-  const [message, setMessage] = useState("");
   const [loading, setLoading] = useState(false);
+  const [msg, setMsg] = useState("");
 
-  // ✅ Fetch quotation data
-  useEffect(() => {
-    axios
-      .get(`http://localhost:9090/api/quotations/${id}`)
-      .then((res) => setQuotation(res.data))
-      .catch((err) => console.error("Error fetching quotation:", err));
-  }, [id]);
+  useEffect(()=>{
+    axios.get(`http://localhost:9090/api/quotations/${id}`)
+      .then(r => {
+        setQuotation(r.data);
+        if(r.data.items && r.data.items.length){
+          // map backend items if present
+          const mapped = r.data.items.map(it => ({
+            name: it.particular || it.name || "",
+            qty: it.quantity || it.qty || 1,
+            price: it.price || it.rate || (it.total ? (it.total) : 0)
+          }));
+          setItems(mapped);
+        }
+      })
+      .catch(e => { console.error(e); setMsg("Failed to load quotation"); });
+  },[id]);
 
-  const handleItemChange = (index, field, value) => {
-    const updated = [...items];
-    updated[index][field] = value;
-    setItems(updated);
+  const handleItemChange = (idx, field, value) => {
+    const copy = [...items]; copy[idx][field] = field === "name" ? value : Number(value) || 0; setItems(copy);
   };
+  const addItem = () => setItems([...items, {name:"", qty:1, price:0}]);
+  const removeItem = (idx) => setItems(items.filter((_,i)=>i!==idx));
 
-  const addItem = () => setItems([...items, { name: "", qty: 1, price: 0 }]);
-  const removeItem = (index) => setItems(items.filter((_, i) => i !== index));
+  const grandTotal = items.reduce((s,it)=> s + (it.qty||0)*(it.price||0), 0);
 
-  const total = items.reduce((sum, i) => sum + i.qty * i.price, 0);
+ function generatePdfBlob() {
+  const doc = new jsPDF({ unit: "pt", format: "a4" });
 
-  // ✅ BLUE COLOR HEADER + BEAUTIFUL LAYOUT + NO SUPERSCRIPT
-  const generatePdf = () => {
-    const doc = new jsPDF();
+  // header
+  doc.setFillColor(14,122,255);
+  doc.rect(0,0,595,72,"F"); // A4 width ~595pt
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(20);
+  doc.setTextColor(255,255,255);
+  doc.text("QUOTATION", 40, 44);
 
-    // ✅ FIX: Some APIs return quotation.customer, some return flat
-    const customer = quotation.customer || quotation;
+  doc.setFont("helvetica","normal");
+  doc.setFontSize(11);
+  doc.setTextColor(30,41,59);
 
-    // -------------------------------
-    // ✅ QUOTATION HEADER
-    // -------------------------------
-    doc.setFillColor(0, 102, 204);
-    doc.rect(0, 0, 210, 25, "F"); // Blue header bar
+  const yStart = 100;
+  doc.text(`Customer: ${quotation?.customer?.name || quotation?.name || ""}`, 40, yStart);
+  doc.text(`Email: ${quotation?.customer?.email || quotation?.email || ""}`, 40, yStart + 16);
+  doc.text(`WhatsApp: ${quotation?.customer?.whatsAppNo || quotation?.whatsAppNo || ""}`, 40, yStart + 32);
 
-    doc.setFontSize(20);
-    doc.setTextColor(255, 255, 255);
-    doc.text("InfoSync Quotation", 70, 16);
+  // table header
+  let y = yStart + 60;
+  doc.setFont("helvetica","bold");
+  doc.setTextColor(14,122,255);
+  doc.text("Sr", 40, y);
+  doc.text("Particular", 80, y);
+  doc.text("Qty", 380, y);
+  doc.text("Price", 430, y);
+  doc.text("Total", 510, y);
 
-    // -------------------------------
-    // ✅ CUSTOMER SECTION
-    // -------------------------------
-    doc.setTextColor(0, 0, 0);
-    doc.setFontSize(14);
-    doc.text("Customer Details", 20, 40);
+  doc.setLineWidth(0.5);
+  doc.setDrawColor(220, 227, 235);
+  doc.line(40, y+4, 555, y+4);
+  y += 18;
+  doc.setFont("helvetica","normal");
+  doc.setTextColor(30,41,59);
 
-    doc.setFontSize(12);
-    doc.text(`Name: ${customer.name}`, 20, 50);
-    doc.text(`Email: ${customer.email}`, 20, 58);
-    doc.text(`WhatsApp: ${customer.whatsAppNo}`, 20, 66);
+  items.forEach((it, idx) => {
+    if(y > 740){ doc.addPage(); y = 60; }
+    doc.text(String(idx+1), 40, y);
+    doc.text(String(it.name || ""), 80, y, { maxWidth: 280 });
+    doc.text(String(it.qty), 380, y);
+    doc.text((Number(it.price) || 0).toFixed(2), 430, y);
+    doc.text(((it.qty||0)*(it.price||0)).toFixed(2), 510, y);
+    y += 18;
+  });
 
-    doc.text(`Quotation No: ${id}`, 150, 50);
-    doc.text(`Date: ${new Date().toLocaleDateString()}`, 150, 58);
+  y += 18;
+  doc.setFont("helvetica","bold");
+  doc.setTextColor(14,122,255);
 
-    // -------------------------------
-    // ✅ ITEMS TABLE
-    // -------------------------------
-    let y = 85;
+  // *** THIS IS THE FIXED LINE ***
+  // Replaced '₹' with 'Rs.' to fix the font issue
+  doc.text(`Grand Total: Rs. ${grandTotal.toFixed(2)}`, 40, y);
 
-    doc.setFontSize(14);
-    doc.text("Items", 20, y);
-    y += 10;
+  return doc.output("blob");
+}
 
-    doc.setFontSize(12);
-    doc.text("Item", 20, y);
-    doc.text("Qty", 90, y);
-    doc.text("Price", 130, y);
-    doc.text("Total", 170, y);
-
-    y += 5;
-    doc.line(20, y, 190, y);
-    y += 8;
-
-    items.forEach((item) => {
-      doc.text(item.name, 20, y);
-      doc.text(String(item.qty), 90, y);
-      doc.text(`Rs. ${item.price}`, 130, y);
-      doc.text(`Rs. ${item.qty * item.price}`, 170, y);
-      y += 8;
-    });
-
-    // -------------------------------
-    // ✅ GRAND TOTAL
-    // -------------------------------
-    y += 10;
-    doc.setFontSize(14);
-    doc.setTextColor(0, 102, 204);
-    doc.text(`Grand Total: Rs. ${total}`, 20, y);
-
-    return doc.output("blob");
-  };
-
-  // ✅ Submit Handler
   const handleSubmit = async (e) => {
     e.preventDefault();
+    if(!quotation) { setMsg("Quotation not loaded"); return; }
+
     setLoading(true);
-    setMessage("");
+    setMsg("");
 
-    try {
-      const pdfBlob = generatePdf();
-      const pdfFile = new File([pdfBlob], `quotation_${id}.pdf`, {
-        type: "application/pdf",
-      });
+    try{
+      const pdfBlob = generatePdfBlob();
+      const pdfFile = new File([pdfBlob], `quotation_${id}.pdf`, { type: "application/pdf" });
 
-      const formData = new FormData();
-      formData.append("quotationPdf", pdfFile);
+      const fd = new FormData();
+      fd.append("quotationPdf", pdfFile);
+      if(drawing) fd.append("drawing", drawing);
+      images.forEach(img => fd.append("images", img));
 
-      if (drawing) formData.append("drawingFile", drawing);
-      images.forEach((img) => formData.append("images", img));
+      // send to backend endpoint (multipart). backend expects path: /api/quotations/{id}/send
+      const res = await axios.post(`http://localhost:9090/api/quotations/${id}/send`, fd);
 
-      const res = await axios.post(
-        `http://localhost:9090/api/quotations/${id}/send`,
-        formData,
-        { headers: { "Content-Type": "multipart/form-data" } }
-      );
-
-      setMessage(res.data || "✅ Quotation sent successfully!");
-    } catch (err) {
+      setMsg(res.data || "Quotation sent");
+    }catch(err){
       console.error(err);
-      setMessage("❌ Failed to send quotation.");
-    } finally {
+      setMsg("Failed to send quotation");
+    }finally{
       setLoading(false);
     }
   };
 
-  if (!quotation) return <div className="loading">Loading...</div>;
-
-  const customer = quotation.customer || quotation;
+  if(!quotation) return <div className="card center">Loading quotation...</div>;
 
   return (
-    <div className="send-quotation-page">
-      <div className="form-container">
-        <h2>Send Quotation #{id}</h2>
+    <div className="card send-quotation">
+      <h2>Send Quotation{id}</h2>
 
-        <div className="customer-info">
-          <p>
-            <strong>Name:</strong> {customer.name}
-          </p>
-          <p>
-            <strong>Email:</strong> {customer.email}
-          </p>
-          <p>
-            <strong>WhatsApp:</strong> {customer.whatsAppNo}
-          </p>
-        </div>
+      <div style={{marginBottom:12}}>
+        <strong>Customer:</strong> {quotation.customer?.name || quotation.name}
+        <div className="small">{quotation.customer?.email || quotation.email}</div>
+      </div>
 
-        <form onSubmit={handleSubmit}>
-          <h3>Quotation Items</h3>
-
-          {items.map((item, index) => (
-            <div key={index} className="item-row">
-              <input
-                type="text"
-                placeholder="Item name"
-                value={item.name}
-                onChange={(e) =>
-                  handleItemChange(index, "name", e.target.value)
-                }
-                required
-              />
-              <input
-                type="number"
-                placeholder="Qty"
-                value={item.qty}
-                onChange={(e) =>
-                  handleItemChange(index, "qty", Number(e.target.value))
-                }
-                required
-              />
-              <input
-                type="number"
-                placeholder="Price"
-                value={item.price}
-                onChange={(e) =>
-                  handleItemChange(index, "price", Number(e.target.value))
-                }
-                required
-              />
-
-              <button
-                type="button"
-                className="remove-btn"
-                onClick={() => removeItem(index)}
-              >
-                ✖
-              </button>
+      <form onSubmit={handleSubmit}>
+        <div>
+          <h4>Items</h4>
+          {items.map((it, idx) => (
+            <div className="item-row" key={idx}>
+              <input placeholder="Particular" value={it.name} onChange={e=>handleItemChange(idx,"name", e.target.value)} />
+              <input type="number" style={{width:80}} value={it.qty} onChange={e=>handleItemChange(idx,"qty", Number(e.target.value))} />
+              <input type="number" style={{width:120}} value={it.price} onChange={e=>handleItemChange(idx,"price", Number(e.target.value))} />
+              {/* This '₹' is fine because it's in HTML, not the PDF */}
+              <div style={{width:120, textAlign:"right", paddingRight:8}}>₹{((it.qty||0)*(it.price||0)).toFixed(2)}</div>
+              <button type="button" className="btn" onClick={()=>removeItem(idx)}>✖</button>
             </div>
           ))}
 
-          <button type="button" className="add-item-btn" onClick={addItem}>
-            + Add Item
-          </button>
-
-          <h4>Total: Rs. {total}</h4>
-
-          <div className="form-group">
-            <label>Upload Drawing File (Optional):</label>
-            <input
-              type="file"
-              accept=".pdf,.dwg,.dxf"
-              onChange={(e) => setDrawing(e.target.files[0])}
-            />
+          <div style={{marginTop:8}}>
+            <button type="button" className="btn btn-ghost" onClick={addItem}>+ Add item</button>
           </div>
+        </div>
 
-          <div className="form-group">
-            <label>Upload Images (Optional):</label>
-            <input
-              type="file"
-              multiple
-              accept="image/*"
-              onChange={(e) => setImages([...e.target.files])}
-            />
-          </div>
+        <div style={{marginTop:14}}>
+          <label>Upload drawing (optional)</label>
+          <input type="file" accept=".pdf,.dwg,.dxf,.cdr,.png,.jpg" onChange={e=>setDrawing(e.target.files[0])} />
+        </div>
 
-          <button type="submit" disabled={loading}>
-            {loading ? "Sending..." : "Send Quotation"}
-          </button>
-        </form>
+        <div style={{marginTop:12}}>
+          <label>Upload images (optional)</label>
+          <input type="file" multiple accept="image/*" onChange={e=>setImages([...e.target.files])} />
+        </div>
 
-        {message && <p className="message">{message}</p>}
-      </div>
+        <div style={{marginTop:16, display:"flex", gap:8}}>
+          <button className="btn btn-primary" type="submit" disabled={loading}>{loading ? "Sending..." : "Send Quotation"}</button>
+          <button className="btn btn-ghost" type="button" onClick={()=>nav("/quotations")}>Back</button>
+        </div>
+      </form>
+
+      {msg && <div style={{marginTop:12}} className="small">{msg}</div>}
     </div>
   );
 }

@@ -1,7 +1,7 @@
 package com.asent.invoSync.entity;
+
 import jakarta.persistence.*;
 import lombok.*;
-
 import java.time.LocalDateTime;
 import java.util.*;
 
@@ -18,5 +18,5 @@ public class Customer {
     private LocalDateTime date;
 
     @OneToMany(mappedBy = "customer", cascade = CascadeType.ALL, orphanRemoval = true)
-    private List<Quotation> quotations;
+    private List<Quotation> quotations = new ArrayList<>();
 }

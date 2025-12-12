@@ -1,18 +1,19 @@
 package com.asent.invoSync.mapper;
+
 import com.asent.invoSync.entity.Item;
 import com.asent.invoSync.dto.ItemDTO;
 
 public class ItemMapper {
-    public static ItemDTO toDTO(Item i){
-        if(i==null) return null;
-        ItemDTO dto = new ItemDTO();
-        dto.setId(i.getId());
-        dto.setQuantity(i.getQuantity());
-        dto.setParticular(i.getParticular());
-        dto.setPrice(i.getPrice());
-        dto.setTotal(i.getTotal());
-        dto.setQuotationId(i.getQuotation()!=null?i.getQuotation().getId():null);
-        dto.setBillingId(i.getBilling()!=null?i.getBilling().getId():null);
-        return dto;
+    public static ItemDTO toDTO(Item it){
+        if(it==null) return null;
+        ItemDTO d = new ItemDTO();
+        d.setId(it.getId());
+        d.setParticular(it.getParticular());
+        d.setQuantity(it.getQuantity());
+        d.setPrice(it.getPrice());
+        d.setTotal(it.getTotal());
+        d.setQuotationId(it.getQuotation()!=null?it.getQuotation().getId():null);
+        d.setBillingId(it.getBilling()!=null?it.getBilling().getId():null);
+        return d;
     }
 }
