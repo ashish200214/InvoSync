@@ -14,7 +14,8 @@ export default function QuotationList(){
   const fetch = async ()=>{
     try{
       const res = await axios.get("http://localhost:9090/api/quotations/");
-      setRows(res.data || []);
+        (res.data || []);
+        setRows(res.data)
     }catch(err){
       console.error(err);
       alert("Failed to load quotations");

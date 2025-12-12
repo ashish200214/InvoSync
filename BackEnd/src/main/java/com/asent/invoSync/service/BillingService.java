@@ -35,35 +35,57 @@ public class BillingService {
     /**
      * Create bill by copying items from quotation; returns created bill id
      */
-    public Long createBillFromQuotation(Long quotationId) {
-        Quotation q = quotationRepository.findByIdWithItems(quotationId)
-                .orElseThrow(() -> new RuntimeException("Quotation not found"));
+  public Long createBillFromQuotation(Long quotationId) {
+    Quotation q = quotationRepository.findByIdWithItems(quotationId)
+            .orElseThrow(() -> new RuntimeException("Quotation not found"));
+    q.setStatus("Confirmed");
+    quotationRepository.save(q);
 
-        q.setStatus("Confirmed");
-        quotationRepository.save(q);
+    Bill bill = new Bill();
+    bill.setDrawing(q.getDrawing());
+    bill.setQuotation(q); // link back to quotation
 
-        Bill bill = new Bill();
-        bill.setDrawing(q.getDrawing());
-        bill.setQuotation(q);
-        double sum = q.getItems()!=null ? q.getItems().stream().mapToDouble(it -> it.getTotal()!=null?it.getTotal():0).sum() : 0.0;
-        bill.setTotal(sum);
-        bill.setRemainingAmount(sum);
+    // copy items from quotation to bill (so bill.items persisted and linked)
+    List<Item> billItems = new ArrayList<>();
+    if (q.getItems() != null && !q.getItems().isEmpty()) {
+        for (Item qi : q.getItems()) {
+            Item bi = new Item();
+            bi.setParticular(qi.getParticular());
+            bi.setQuantity(qi.getQuantity());
+            bi.setPrice(qi.getPrice());
 
-        // copy items and set billing reference
-        if(q.getItems()!=null){
-            for(Item qi : q.getItems()){
-                Item bi = new Item();
-                bi.setParticular(qi.getParticular());
-                bi.setQuantity(qi.getQuantity());
-                bi.setPrice(qi.getPrice());
-                bi.setTotal(qi.getTotal());
-                bi.setBilling(bill);
-                bill.getItems().add(bi);
+            // compute item total: prefer existing total, otherwise price * qty
+            Double itemTotal = null;
+            if (qi.getTotal() != null) {
+                itemTotal = qi.getTotal();
+            } else {
+                double p = qi.getPrice() != null ? qi.getPrice() : 0.0;
+                int qnt = qi.getQuantity() != null ? qi.getQuantity() : 1;
+                itemTotal = p * qnt;
             }
+            bi.setTotal(itemTotal);
+
+            bi.setBilling(bill); // important: set owning side
+            billItems.add(bi);
         }
-        billingRepository.save(bill); // cascade will save items
-        return bill.getId();
     }
+    bill.setItems(billItems);
+
+    // calculate totals (sum of item totals)
+    double sum = bill.getItems() != null
+            ? bill.getItems().stream().mapToDouble(it ->
+                it.getTotal() != null ? it.getTotal() :
+                ((it.getPrice() != null ? it.getPrice() : 0.0) * (it.getQuantity() != null ? it.getQuantity() : 1))
+              ).sum()
+            : 0.0;
+
+    bill.setTotal(sum);
+    bill.setRemainingAmount(sum);
+
+    billingRepository.save(bill);
+
+    return bill.getId();
+}
 
     public Bill getBill(Long id){
         return billingRepository.findByIdWithItemsAndQuotationAndCustomer(id)

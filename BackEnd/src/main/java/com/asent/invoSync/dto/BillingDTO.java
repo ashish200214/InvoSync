@@ -1,19 +1,26 @@
 package com.asent.invoSync.dto;
 
+import lombok.*;
 import java.util.List;
 
-import lombok.Data;
-
 @Data
+@NoArgsConstructor
+@AllArgsConstructor
 public class BillingDTO {
     private Long id;
     private Long drawingId;
-    private Long quotationId;            // new
     private Double total;
     private Double remainingAmount;
-    private String pdfUrl;               // new
     private List<ItemDTO> items;
-    // optional: customer fields
+
+    // keep customer object too (optional)
+    private CustomerDTO customer;
+    private String name; // fallback flat name
+
+    // NEW fields used by your service
+    private Long quotationId;
+    private String pdfUrl;
+
     private Long customerId;
     private String customerName;
     private String customerEmail;

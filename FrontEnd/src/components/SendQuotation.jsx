@@ -114,9 +114,7 @@ export default function SendQuotation(){
       images.forEach(img => fd.append("images", img));
 
       // send to backend endpoint (multipart). backend expects path: /api/quotations/{id}/send
-      const res = await axios.post(`http://localhost:9090/api/quotations/${id}/send`, fd, {
-        headers: { "Content-Type": "multipart/form-data" }
-      });
+      const res = await axios.post(`http://localhost:9090/api/quotations/${id}/send`, fd);
 
       setMsg(res.data || "Quotation sent");
     }catch(err){
@@ -131,7 +129,7 @@ export default function SendQuotation(){
 
   return (
     <div className="card send-quotation">
-      <h2>Send Quotation #{id}</h2>
+      <h2>Send Quotation{id}</h2>
 
       <div style={{marginBottom:12}}>
         <strong>Customer:</strong> {quotation.customer?.name || quotation.name}
