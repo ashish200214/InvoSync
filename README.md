@@ -1,6 +1,10 @@
 
 
 # 📄 InfoSync Quotation Management System
+<img width="1920" height="1008" alt="Screenshot 2026-01-06 161340" src="https://github.com/user-attachments/assets/036a1b72-6e8f-4260-8815-5f167ba4ba21" />
+<img width="1920" height="1008" alt="Screenshot 2026-01-06 161533" src="https://github.com/user-attachments/assets/9372f35e-3a8d-4861-b28b-9d8102acdc5f" />
+<img width="909" height="529" alt="Screenshot 2026-01-06 161607" src="https://github.com/user-attachments/assets/63399993-85d2-4178-a3f1-fcefa9f7e846" />
+<img width="1920" height="1008" alt="Screenshot 2026-01-06 161723" src="https://github.com/user-attachments/assets/c3d77b3d-f04a-45e5-b391-f0fed101c9b4" />
 
 A full-stack application for creating quotations, generating PDFs on the frontend, uploading files to AWS S3, and sending quotation emails automatically.
 
